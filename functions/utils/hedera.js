@@ -72,7 +72,7 @@ export class HederaClient {
       const customerPublicKey = customerPrivateKey.publicKey;
       const customerTx = await new AccountCreateTransaction()
         .setKey(customerPublicKey)
-        .setInitialBalance(new Hbar(50))  // Higher initial balance
+        .setInitialBalance(new Hbar(10))  // Higher initial balance
         .execute(this.client);
       const customerReceipt = await customerTx.getReceipt(this.client);
       const customerAccountId = customerReceipt.accountId;
@@ -82,7 +82,7 @@ export class HederaClient {
       const agentPublicKey = agentPrivateKey.publicKey;
       const agentTx = await new AccountCreateTransaction()
         .setKey(agentPublicKey)
-        .setInitialBalance(new Hbar(50))
+        .setInitialBalance(new Hbar(10))
         .execute(this.client);
       const agentReceipt = await agentTx.getReceipt(this.client);
       const agentAccountId = agentReceipt.accountId;
@@ -92,7 +92,7 @@ export class HederaClient {
       const storeOwnerPublicKey = storeOwnerPrivateKey.publicKey;
       const storeOwnerTx = await new AccountCreateTransaction()
         .setKey(storeOwnerPublicKey)
-        .setInitialBalance(new Hbar(50))
+        .setInitialBalance(new Hbar(10))
         .execute(this.client);
       const storeOwnerReceipt = await storeOwnerTx.getReceipt(this.client);
       const storeOwnerAccountId = storeOwnerReceipt.accountId;
@@ -301,20 +301,57 @@ export class HederaClient {
         .setFunction("productAmount");
       const amountResult = await amountQuery.execute(this.client);
       
-      // Parse the results (status is an enum, so it comes back as a number)
+      // Get delivery fee
+      const feeQuery = new ContractCallQuery()
+        .setContractId(contractId)
+        .setGas(100000)
+        .setFunction("deliveryFee");
+      const feeResult = await feeQuery.execute(this.client);
+      
+      // Get agent stake
+      const stakeQuery = new ContractCallQuery()
+        .setContractId(contractId)
+        .setGas(100000)
+        .setFunction("agentStake");
+      const stakeResult = await stakeQuery.execute(this.client);
+      
+      // Get contract balance
+      const balanceQuery = new ContractCallQuery()
+        .setContractId(contractId)
+        .setGas(100000)
+        .setFunction("getContractBalance");
+      const balanceResult = await balanceQuery.execute(this.client);
+      
+      // Parse the results
       const status = statusResult.getUint256(0).toNumber();
       const agent = agentResult.getAddress(0);
       const amount = amountResult.getUint256(0).toNumber();
+      const deliveryFee = feeResult.getUint256(0).toNumber();
+      const agentStake = stakeResult.getUint256(0).toNumber();
+      const balance = balanceResult.getUint256(0).toNumber();
+
+      // Add this to your getContractState function to see all values in their raw form
+      // console.log(`Raw values in contract:`);
+      // console.log(`- Product Amount (raw): ${stateBefore.amount}`);
+      // console.log(`- Delivery Fee (raw): ${stateBefore.deliveryFee}`);
+      // console.log(`- Agent Stake (raw): ${stateBefore.agentStake}`);
+      // console.log(`- Contract Balance (raw): ${contractBalance}`);
       
       console.log(`Contract state:
         Status: ${status} (0=Initiated, 1=AgentAssigned, 2=PickedUp, 3=Delivered, 4=Failed)
         Delivery Agent: ${agent}
-        Product Amount: ${amount}`);
+        Product Amount: ${amount}
+        Delivery Fee: ${deliveryFee}
+        Agent Stake: ${agentStake}
+        Contract Balance: ${balance}`);
       
       return {
         status,
         agent,
-        amount
+        amount,
+        deliveryFee,
+        agentStake,
+        balance
       };
     } catch (error) {
       console.error(`Error getting contract state: ${error}`);
@@ -351,75 +388,91 @@ export class HederaClient {
     );
   }
 
-  async confirmPickup(contractId) {
-    if (!this.wallets.storeOwner) {
-      throw new Error("Store owner wallet not initialized");
-    }
-    
-    // Execute as store owner
-    return this.executeContract(
-      contractId,
-      "confirmPickup",
-      null, 
-      100000, // Increased gas limit
-      0,
-      this.wallets.storeOwner
-    );
-  }
-
-  // Updated method for delivery agent acceptance
+  
   async acceptDeliveryAsAgent(contractId) {
     if (!this.wallets.deliveryAgent) {
       throw new Error("Delivery agent wallet not initialized");
     }
     
-    // Get the product amount to stake from the contract
-    const state = await this.getContractState(contractId);
-    const amountToStake = state.amount;
+    // Get the product amount as stored in the contract
+    const amountQuery = new ContractCallQuery()
+      .setContractId(contractId)
+      .setGas(100000)
+      .setFunction("productAmount");
+    const amountResult = await amountQuery.execute(this.client);
+    const amountToStake = amountResult.getUint256(0).toNumber();
     
     console.log(`Delivery agent accepting delivery with stake: ${amountToStake} HBAR`);
-    console.log(`Delivery agent address: ${this._getEthereumAddressFromAccount(this.wallets.deliveryAgent.accountId)}`);
     
-    // Execute as delivery agent with proper HBAR conversion
+    // Explicitly log the Hbar amount being sent
+    const paymentAmount = new Hbar(amountToStake);
+    console.log(`Payment amount in Hbar: ${paymentAmount.toString()}`);
+    console.log(`Payment in tinybars: ${paymentAmount.toTinybars().toString()}`);
+    
     return this._executeAsUser(
       this.wallets.deliveryAgent.accountId,
       this.wallets.deliveryAgent.privateKey,
       async () => {
         const transaction = new ContractExecuteTransaction()
           .setContractId(contractId)
-          .setGas(500000) // Increased gas limit
+          .setGas(500000)
           .setFunction("acceptDelivery")
-          .setPayableAmount(new Hbar(amountToStake)); // Use Hbar constructor for proper conversion
-        
-        console.log(`Executing acceptDelivery transaction...`);
-        try {
-          const response = await transaction.execute(this.client);
-          console.log(`Getting transaction receipt...`);
-          return await response.getReceipt(this.client);
-        } catch (error) {
-          console.error(`Transaction failed with details: ${JSON.stringify(error, null, 2)}`);
-          throw error;
-        }
+          .setPayableAmount(Hbar.fromTinybars(amountToStake)); // Convert from tinybars instead
+
+        console.log(`Executing acceptDeliveryAsAgent transaction...`);
+        const response = await transaction.execute(this.client);
+        console.log(`Getting transaction receipt...`);
+        return await response.getReceipt(this.client);
       }
     );
   }
 
-  // This method can be removed or kept as a legacy version
-  async acceptDelivery(contractId, amount) {
-    return this.acceptDeliveryAsAgent(contractId);
-  }
+  async confirmPickup(contractId) {
+    if (!this.wallets.storeOwner) {
+        throw new Error("Store owner wallet not initialized");
+    }
+
+    return this.executeContract(
+        contractId,
+        "confirmPickup",
+        null, // No parameters needed
+        100000, // Increased gas limit
+        0,
+        this.wallets.storeOwner // Store owner executes this
+    );
+}
+
+
 
   async confirmDelivery(contractId) {
     if (!this.wallets.deliveryAgent) {
       throw new Error("Delivery agent wallet not initialized");
     }
+
+    // Check contract state and balance before delivery
+    const stateBefore = await this.getContractState(contractId);
+    console.log("Contract State Before Delivery:", stateBefore);
+    
+    // Add a direct call to get contract balance
+    const balanceQuery = new ContractCallQuery()
+      .setContractId(contractId)
+      .setGas(100000)
+      .setFunction("getContractBalance");
+    const balanceResult = await balanceQuery.execute(this.client);
+    const contractBalance = balanceResult.getUint256(0).toNumber();
+    
+    console.log(`Contract Balance: ${contractBalance} HBAR`);
+    console.log(`Required balance for successful delivery:`);
+    console.log(`- Product Amount: ${stateBefore.amount} HBAR (to store owner)`);
+    console.log(`- Delivery Fee: ${stateBefore.deliveryFee || 'unknown'} HBAR (to delivery agent)`);
+    console.log(`- Agent Stake: ${stateBefore.agentStake || 'unknown'} HBAR (back to delivery agent)`);
     
     // Execute as delivery agent
     return this.executeContract(
       contractId,
       "confirmDelivery",
       null,
-      150000, // Increased gas limit
+      1000000, // Increased gas limit
       0,
       this.wallets.deliveryAgent
     );
@@ -430,9 +483,9 @@ export async function runComprehensiveTest() {
   console.log("Starting Comprehensive Hedera Client Test");
 
   // Your credentials here
-  const OPERATOR_ID = "0.0.5787516";
+  const OPERATOR_ID = "0.0.5792436";
   const OPERATOR_KEY = process.env.HEDERA_PRIVATE_KEY || 
-    "302e020100300506032b657004220420aa89ff803a14a0ed8c791295b5819f6bf0bd679cc184155ba85d8475621754c1";
+    "3030020100300706052b8104000a04220420370c448d0bd0b073d75cf7dc18dbf51723e640b1780b03c720ff918cb6795264";
 
   try {
     // Initialize Hedera Client

@@ -1,6 +1,6 @@
-import { GeminiHandler } from "../utils/gemini";
-import { EmbeddingService } from "../utils/pinecone";
-import { FirestoreRepository } from "../utils/firestore";
+const { GeminiHandler } = require("../utils/gemini");
+const { EmbeddingService } = require("../utils/pinecone");
+const { FirestoreRepository } = require("../utils/firestore");
 
 
 class ProductSearchService {
@@ -159,4 +159,4 @@ class ProductSearchService {
     }
 }
 
-export { ProductSearchService };
+module.exports = { ProductSearchService };

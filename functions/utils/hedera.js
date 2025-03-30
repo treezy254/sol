@@ -1,4 +1,4 @@
-import {
+const {
   Client,
   AccountCreateTransaction,
   FileCreateTransaction,
@@ -9,8 +9,10 @@ import {
   ContractFunctionParameters,
   PrivateKey,
   Hbar,
-} from "@hashgraph/sdk";
-import * as fs from "fs/promises";
+} = require("@hashgraph/sdk");
+
+const fs = require("fs").promises;
+
 
 // Utility function to ensure valid Ethereum-style address
 function formatEthereumAddress(address) {
@@ -23,17 +25,17 @@ function formatEthereumAddress(address) {
   return "0x" + formattedAddress;
 }
 
-export class HederaClient {
+class HederaClient {
   constructor(operatorId, operatorKey) {
     try {
       // Setup Hedera client
       this.client = Client.forTestnet();
       this.client.setOperator(operatorId, PrivateKey.fromString(operatorKey));
-      
+
       // Store the operator credentials for reference
       this.operatorId = operatorId;
       this.operatorKey = PrivateKey.fromString(operatorKey);
-      
+
       // Store user wallets by userId
       this.userWallets = new Map();
     } catch (error) {
@@ -48,7 +50,7 @@ export class HederaClient {
       if (this.userWallets.has(userId)) {
         return {
           userId,
-          accountId: this.userWallets.get(userId).accountId
+          accountId: this.userWallets.get(userId).accountId,
         };
       }
 
@@ -56,23 +58,23 @@ export class HederaClient {
       const userPrivateKey = PrivateKey.generate();
       const userPublicKey = userPrivateKey.publicKey;
       const userTx = await new AccountCreateTransaction()
-        .setKey(userPublicKey)
-        .setInitialBalance(new Hbar(10))  // Initial balance
-        .execute(this.client);
+          .setKey(userPublicKey)
+          .setInitialBalance(new Hbar(10)) // Initial balance
+          .execute(this.client);
       const userReceipt = await userTx.getReceipt(this.client);
       const userAccountId = userReceipt.accountId;
-      
+
       // Store wallet information
       const walletInfo = {
         accountId: userAccountId.toString(),
-        privateKey: userPrivateKey
+        privateKey: userPrivateKey,
       };
-      
+
       this.userWallets.set(userId, walletInfo);
-      
+
       return {
         userId,
-        accountId: userAccountId.toString()
+        accountId: userAccountId.toString(),
       };
     } catch (error) {
       console.error(`Wallet creation error for user ${userId}: ${error}`);
@@ -83,50 +85,50 @@ export class HederaClient {
   /**
  * Get wallet for a specific user
  * @param {string} userId - The user ID to retrieve wallet for
- * @returns {Object} - The wallet information
+ * @return {Object} - The wallet information
  */
-async getWallet(userId) {
-  try {
+  async getWallet(userId) {
+    try {
     // Check if the user has a wallet
-    if (!this.userWallets.has(userId)) {
+      if (!this.userWallets.has(userId)) {
+        return {
+          exists: false,
+          message: "Wallet not found for this user",
+        };
+      }
+
+      const wallet = this.userWallets.get(userId);
+
       return {
-        exists: false,
-        message: "Wallet not found for this user"
+        exists: true,
+        userId,
+        accountId: wallet.accountId.toString(),
+        ethereumAddress: this._getEthereumAddressFromAccount(wallet.accountId),
       };
+    } catch (error) {
+      console.error(`Error retrieving wallet for user ${userId}: ${error}`);
+      throw error;
     }
-    
-    const wallet = this.userWallets.get(userId);
-    
-    return {
-      exists: true,
-      userId,
-      accountId: wallet.accountId.toString(),
-      ethereumAddress: this._getEthereumAddressFromAccount(wallet.accountId)
-    };
-  } catch (error) {
-    console.error(`Error retrieving wallet for user ${userId}: ${error}`);
-    throw error;
   }
-}
 
   // Helper method to temporarily switch the client operator
   async _executeAsUser(accountId, privateKey, operation) {
     // Store current operator
     const currentOperator = {
       accountId: this.operatorId,
-      privateKey: this.operatorKey
+      privateKey: this.operatorKey,
     };
-    
+
     try {
       // Switch to the specified user
       this.client.setOperator(accountId, privateKey);
-      
+
       // Execute the operation
       const result = await operation();
-      
+
       // Switch back to original operator
       this.client.setOperator(currentOperator.accountId, currentOperator.privateKey);
-      
+
       return result;
     } catch (error) {
       // Make sure we switch back even if there's an error
@@ -139,28 +141,28 @@ async getWallet(userId) {
     // Create consistent address format for all participants
     const accountStr = accountId.toString();
     // Simply pad the account number with zeros to create a deterministic address
-    const paddedStr = accountStr.replace(/\./g, '').padStart(40, '0');
+    const paddedStr = accountStr.replace(/\./g, "").padStart(40, "0");
     const address = "0x" + paddedStr;
-    
+
     console.log(`Converted Hedera account ${accountId} to fixed Ethereum address ${address}`);
     return address;
   }
 
-  async deployContract(orderOwnerId, storeOwnerId, amount, deliveryFee, bytecodePath = 'contracts/LogisticsEscrow.bin') {
+  async deployContract(orderOwnerId, storeOwnerId, amount, deliveryFee, bytecodePath = "contracts/LogisticsEscrow.bin") {
     try {
       if (!this.userWallets.has(orderOwnerId) || !this.userWallets.has(storeOwnerId)) {
         throw new Error("Both order owner and store owner must have wallets before deploying contract");
       }
-      
+
       const orderOwnerWallet = this.userWallets.get(orderOwnerId);
       const storeOwnerWallet = this.userWallets.get(storeOwnerId);
-      
+
       // Read bytecode
-      const bytecode = await fs.readFile(bytecodePath, 'utf8');
-      
+      const bytecode = await fs.readFile(bytecodePath, "utf8");
+
       // Get store owner Ethereum address format
       const storeOwnerAddress = this._getEthereumAddressFromAccount(storeOwnerWallet.accountId);
-      
+
       console.log(`Deploying contract for order:
         Order Owner: ${orderOwnerId}
         Store Owner: ${storeOwnerAddress}
@@ -169,7 +171,7 @@ async getWallet(userId) {
 
       // Create file to store bytecode
       const fileTx = new FileCreateTransaction()
-        .setKeys([this.client.operatorPublicKey]);
+          .setKeys([this.client.operatorPublicKey]);
       const fileResponse = await fileTx.execute(this.client);
       const fileReceipt = await fileResponse.getReceipt(this.client);
       const fileId = fileReceipt.fileId;
@@ -177,38 +179,38 @@ async getWallet(userId) {
 
       // Append bytecode to file
       const appendTx = new FileAppendTransaction()
-        .setFileId(fileId)
-        .setContents(bytecode);
+          .setFileId(fileId)
+          .setContents(bytecode);
       await appendTx.execute(this.client);
-      console.log('Bytecode successfully appended to file');
-      
+      console.log("Bytecode successfully appended to file");
+
       // Deploy contract as order owner
       return this._executeAsUser(
-        orderOwnerWallet.accountId,
-        orderOwnerWallet.privateKey,
-        async () => {
+          orderOwnerWallet.accountId,
+          orderOwnerWallet.privateKey,
+          async () => {
           // Log the order owner's Ethereum address for verification
-          const ownerAddress = this._getEthereumAddressFromAccount(orderOwnerWallet.accountId);
-          console.log(`Order owner deploying contract from address: ${ownerAddress}`);
-          
-          const contractTx = new ContractCreateTransaction()
-            .setBytecodeFileId(fileId)
-            .setGas(2000000)
-            .setConstructorParameters(
-              new ContractFunctionParameters()
-                .addAddress(storeOwnerAddress)
-                .addUint256(amount)
-                .addUint256(deliveryFee)
-            );
-          
-          const contractResponse = await contractTx.execute(this.client);
-          console.log('Contract deployment transaction executed');
-          
-          const contractReceipt = await contractResponse.getReceipt(this.client);
-          console.log('Contract receipt obtained');
-          
-          return contractReceipt.contractId;
-        }
+            const ownerAddress = this._getEthereumAddressFromAccount(orderOwnerWallet.accountId);
+            console.log(`Order owner deploying contract from address: ${ownerAddress}`);
+
+            const contractTx = new ContractCreateTransaction()
+                .setBytecodeFileId(fileId)
+                .setGas(2000000)
+                .setConstructorParameters(
+                    new ContractFunctionParameters()
+                        .addAddress(storeOwnerAddress)
+                        .addUint256(amount)
+                        .addUint256(deliveryFee)
+                );
+
+            const contractResponse = await contractTx.execute(this.client);
+            console.log("Contract deployment transaction executed");
+
+            const contractReceipt = await contractResponse.getReceipt(this.client);
+            console.log("Contract receipt obtained");
+
+            return contractReceipt.contractId;
+          }
       );
     } catch (error) {
       console.error(`Contract deployment error: ${error}`);
@@ -220,30 +222,30 @@ async getWallet(userId) {
     if (!this.userWallets.has(orderOwnerId)) {
       throw new Error("Order owner wallet not initialized");
     }
-    
+
     const orderOwnerWallet = this.userWallets.get(orderOwnerId);
-    
+
     // Calculate the exact amount in tinybars for precise payment
     const totalAmount = amount + deliveryFee;
     console.log(`Funding contract ${contractId} with: ${totalAmount} HBAR`);
     console.log(`Order owner address: ${this._getEthereumAddressFromAccount(orderOwnerWallet.accountId)}`);
-    
+
     // Execute as order owner with proper HBAR conversion
     return this._executeAsUser(
-      orderOwnerWallet.accountId,
-      orderOwnerWallet.privateKey,
-      async () => {
-        const transaction = new ContractExecuteTransaction()
-          .setContractId(contractId)
-          .setGas(400000)
-          .setFunction("fundContract")
-          .setPayableAmount(new Hbar(totalAmount)); // Use Hbar constructor for proper conversion
-        
-        console.log(`Executing fundContract transaction...`);
-        const response = await transaction.execute(this.client);
-        console.log(`Getting transaction receipt...`);
-        return await response.getReceipt(this.client);
-      }
+        orderOwnerWallet.accountId,
+        orderOwnerWallet.privateKey,
+        async () => {
+          const transaction = new ContractExecuteTransaction()
+              .setContractId(contractId)
+              .setGas(400000)
+              .setFunction("fundContract")
+              .setPayableAmount(new Hbar(totalAmount)); // Use Hbar constructor for proper conversion
+
+          console.log(`Executing fundContract transaction...`);
+          const response = await transaction.execute(this.client);
+          console.log(`Getting transaction receipt...`);
+          return await response.getReceipt(this.client);
+        }
     );
   }
 
@@ -251,63 +253,63 @@ async getWallet(userId) {
     if (!this.userWallets.has(agentId)) {
       throw new Error("Delivery agent wallet not initialized");
     }
-    
+
     const agentWallet = this.userWallets.get(agentId);
-    
+
     // Get the product amount as stored in the contract
     const amountQuery = new ContractCallQuery()
-      .setContractId(contractId)
-      .setGas(100000)
-      .setFunction("productAmount");
+        .setContractId(contractId)
+        .setGas(100000)
+        .setFunction("productAmount");
     const amountResult = await amountQuery.execute(this.client);
     const amountToStake = amountResult.getUint256(0).toNumber();
-    
+
     console.log(`Agent ${agentId} accepting delivery with stake: ${amountToStake} HBAR`);
-    
+
     // Explicitly log the Hbar amount being sent
     const paymentAmount = new Hbar(amountToStake);
     console.log(`Payment amount in Hbar: ${paymentAmount.toString()}`);
     console.log(`Payment in tinybars: ${paymentAmount.toTinybars().toString()}`);
-    
-    return this._executeAsUser(
-      agentWallet.accountId,
-      agentWallet.privateKey,
-      async () => {
-        const transaction = new ContractExecuteTransaction()
-          .setContractId(contractId)
-          .setGas(500000)
-          .setFunction("acceptDelivery")
-          .setPayableAmount(Hbar.fromTinybars(amountToStake)); // Convert from tinybars
 
-        console.log(`Executing acceptDelivery transaction...`);
-        const response = await transaction.execute(this.client);
-        console.log(`Getting transaction receipt...`);
-        return await response.getReceipt(this.client);
-      }
+    return this._executeAsUser(
+        agentWallet.accountId,
+        agentWallet.privateKey,
+        async () => {
+          const transaction = new ContractExecuteTransaction()
+              .setContractId(contractId)
+              .setGas(500000)
+              .setFunction("acceptDelivery")
+              .setPayableAmount(Hbar.fromTinybars(amountToStake)); // Convert from tinybars
+
+          console.log(`Executing acceptDelivery transaction...`);
+          const response = await transaction.execute(this.client);
+          console.log(`Getting transaction receipt...`);
+          return await response.getReceipt(this.client);
+        }
     );
   }
 
   async confirmPickup(storeOwnerId, contractId) {
     if (!this.userWallets.has(storeOwnerId)) {
-        throw new Error("Store owner wallet not initialized");
+      throw new Error("Store owner wallet not initialized");
     }
 
     const storeOwnerWallet = this.userWallets.get(storeOwnerId);
 
     return this._executeAsUser(
-      storeOwnerWallet.accountId,
-      storeOwnerWallet.privateKey,
-      async () => {
-        const transaction = new ContractExecuteTransaction()
-          .setContractId(contractId)
-          .setGas(100000)
-          .setFunction("confirmPickup");
-        
-        console.log(`Executing confirmPickup transaction...`);
-        const response = await transaction.execute(this.client);
-        console.log(`Getting transaction receipt...`);
-        return await response.getReceipt(this.client);
-      }
+        storeOwnerWallet.accountId,
+        storeOwnerWallet.privateKey,
+        async () => {
+          const transaction = new ContractExecuteTransaction()
+              .setContractId(contractId)
+              .setGas(100000)
+              .setFunction("confirmPickup");
+
+          console.log(`Executing confirmPickup transaction...`);
+          const response = await transaction.execute(this.client);
+          console.log(`Getting transaction receipt...`);
+          return await response.getReceipt(this.client);
+        }
     );
   }
 
@@ -321,36 +323,36 @@ async getWallet(userId) {
     // Check contract state and balance before delivery
     const stateBefore = await this.getContractState(contractId);
     console.log("Contract State Before Delivery:", stateBefore);
-    
+
     // Add a direct call to get contract balance
     const balanceQuery = new ContractCallQuery()
-      .setContractId(contractId)
-      .setGas(100000)
-      .setFunction("getContractBalance");
+        .setContractId(contractId)
+        .setGas(100000)
+        .setFunction("getContractBalance");
     const balanceResult = await balanceQuery.execute(this.client);
     const contractBalance = balanceResult.getUint256(0).toNumber();
-    
+
     console.log(`Contract Balance: ${contractBalance} HBAR`);
     console.log(`Required balance for successful delivery:`);
     console.log(`- Product Amount: ${stateBefore.amount} HBAR (to store owner)`);
-    console.log(`- Delivery Fee: ${stateBefore.deliveryFee || 'unknown'} HBAR (to delivery agent)`);
-    console.log(`- Agent Stake: ${stateBefore.agentStake || 'unknown'} HBAR (back to delivery agent)`);
-    
+    console.log(`- Delivery Fee: ${stateBefore.deliveryFee || "unknown"} HBAR (to delivery agent)`);
+    console.log(`- Agent Stake: ${stateBefore.agentStake || "unknown"} HBAR (back to delivery agent)`);
+
     // Execute as delivery agent
     return this._executeAsUser(
-      agentWallet.accountId,
-      agentWallet.privateKey,
-      async () => {
-        const transaction = new ContractExecuteTransaction()
-          .setContractId(contractId)
-          .setGas(1000000)
-          .setFunction("confirmDelivery");
-        
-        console.log(`Executing confirmDelivery transaction...`);
-        const response = await transaction.execute(this.client);
-        console.log(`Getting transaction receipt...`);
-        return await response.getReceipt(this.client);
-      }
+        agentWallet.accountId,
+        agentWallet.privateKey,
+        async () => {
+          const transaction = new ContractExecuteTransaction()
+              .setContractId(contractId)
+              .setGas(1000000)
+              .setFunction("confirmDelivery");
+
+          console.log(`Executing confirmDelivery transaction...`);
+          const response = await transaction.execute(this.client);
+          console.log(`Getting transaction receipt...`);
+          return await response.getReceipt(this.client);
+        }
     );
   }
 
@@ -358,46 +360,46 @@ async getWallet(userId) {
     try {
       // Check the current status
       const statusQuery = new ContractCallQuery()
-        .setContractId(contractId)
-        .setGas(100000)
-        .setFunction("currentStatus");
+          .setContractId(contractId)
+          .setGas(100000)
+          .setFunction("currentStatus");
       const statusResult = await statusQuery.execute(this.client);
-      
+
       // Check if delivery agent is assigned
       const agentQuery = new ContractCallQuery()
-        .setContractId(contractId)
-        .setGas(100000)
-        .setFunction("deliveryAgent");
+          .setContractId(contractId)
+          .setGas(100000)
+          .setFunction("deliveryAgent");
       const agentResult = await agentQuery.execute(this.client);
-      
+
       // Check product amount
       const amountQuery = new ContractCallQuery()
-        .setContractId(contractId)
-        .setGas(100000)
-        .setFunction("productAmount");
+          .setContractId(contractId)
+          .setGas(100000)
+          .setFunction("productAmount");
       const amountResult = await amountQuery.execute(this.client);
-      
+
       // Get delivery fee
       const feeQuery = new ContractCallQuery()
-        .setContractId(contractId)
-        .setGas(100000)
-        .setFunction("deliveryFee");
+          .setContractId(contractId)
+          .setGas(100000)
+          .setFunction("deliveryFee");
       const feeResult = await feeQuery.execute(this.client);
-      
+
       // Get agent stake
       const stakeQuery = new ContractCallQuery()
-        .setContractId(contractId)
-        .setGas(100000)
-        .setFunction("agentStake");
+          .setContractId(contractId)
+          .setGas(100000)
+          .setFunction("agentStake");
       const stakeResult = await stakeQuery.execute(this.client);
-      
+
       // Get contract balance
       const balanceQuery = new ContractCallQuery()
-        .setContractId(contractId)
-        .setGas(100000)
-        .setFunction("getContractBalance");
+          .setContractId(contractId)
+          .setGas(100000)
+          .setFunction("getContractBalance");
       const balanceResult = await balanceQuery.execute(this.client);
-      
+
       // Parse the results
       const status = statusResult.getUint256(0).toNumber();
       const agent = agentResult.getAddress(0);
@@ -405,7 +407,7 @@ async getWallet(userId) {
       const deliveryFee = feeResult.getUint256(0).toNumber();
       const agentStake = stakeResult.getUint256(0).toNumber();
       const balance = balanceResult.getUint256(0).toNumber();
-      
+
       console.log(`Contract state:
         Status: ${status} (0=Initiated, 1=AgentAssigned, 2=PickedUp, 3=Delivered, 4=Failed)
         Delivery Agent: ${agent}
@@ -413,14 +415,14 @@ async getWallet(userId) {
         Delivery Fee: ${deliveryFee}
         Agent Stake: ${agentStake}
         Contract Balance: ${balance}`);
-      
+
       return {
         status,
         agent,
         amount,
         deliveryFee,
         agentStake,
-        balance
+        balance,
       };
     } catch (error) {
       console.error(`Error getting contract state: ${error}`);
@@ -428,3 +430,5 @@ async getWallet(userId) {
     }
   }
 }
+
+module.exports = HederaClient;

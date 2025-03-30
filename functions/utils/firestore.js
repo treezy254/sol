@@ -3,7 +3,7 @@ const admin = require("firebase-admin");
 // Check if Firebase has already been initialized
 if (!admin.apps.length) {
   const serviceAccount = require("./serviceAccount.json");
-  
+
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
   });
@@ -54,12 +54,12 @@ class FirestoreRepository {
     }
 
     let query = collectionRef;
-    for (const { field, operator, value } of filters) {
+    for (const {field, operator, value} of filters) {
       query = query.where(field, operator, value);
     }
 
     const snapshot = await query.get();
-    return snapshot.docs.map(doc => doc.data());
+    return snapshot.docs.map((doc) => doc.data());
   }
 
   static async update(collection, identifier, updates) {

@@ -47,3 +47,4 @@ class FirebaseAuthService {
     }
 }
 
+module.exports = FirebaseAuthService;

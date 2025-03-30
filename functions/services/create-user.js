@@ -1,9 +1,9 @@
-import FirebaseAuthService from './utils/auth';
-import HederaClient from './utils/hedera';
+const FirebaseAuthService = require('../utils/auth');
+const { HederaClient } = require('../utils/hedera');
 
-class CreateUser {
+class CreateUserService {
     constructor(operatorId, operatorKey) {
-        this.authService = new FirebaseAuthService();
+        this.authService = FirebaseAuthService;
         this.hederaClient = new HederaClient(operatorId, operatorKey);
     }
 
@@ -20,15 +20,24 @@ class CreateUser {
             }
 
             const firebaseUid = userResponse.uid;
-
-            // Create Hedera wallet
-            const walletResponse = await this.hederaClient.createWallet(firebaseUid);
-
-            return { success: true, user: userResponse, wallet: walletResponse };
+            
+            // Create Hedera wallet for the user
+            const walletResponse = await this.hederaClient.createUserWallet(firebaseUid);
+            
+            return { 
+                success: true, 
+                user: userResponse, 
+                wallet: walletResponse 
+            };
         } catch (error) {
-            return { success: false, message: "Failed to create wallet", error: error.message };
+            console.error("Error in CreateUserService:", error);
+            return { 
+                success: false, 
+                message: "Failed to create user and wallet", 
+                error: error.message 
+            };
         }
     }
 }
 
-export default CreateUser;
+module.exports = CreateUserService;

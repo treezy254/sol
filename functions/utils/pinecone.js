@@ -41,3 +41,4 @@ class EmbeddingService {
     }
 }
 
+module.exports = EmbeddingService;

@@ -1,3 +1,5 @@
+import { Order } from "../domain/models.js";
+
 class CreateOrder {
     constructor(firestoreRepo, hederaClient) {
         /**
@@ -14,10 +16,9 @@ class CreateOrder {
         /**
          * Execute order creation process:
          * 1. Generate unique order ID
-         * 2. Create Order object
-         * 3. Deploy Hedera smart contract
-         * 4. Fund contract from customer wallet
-         * 5. Persist order in Firestore
+         * 2. Deploy Hedera smart contract between customer and store
+         * 3. Fund contract from customer wallet with product price and delivery fee
+         * 4. Persist order in Firestore
          * 
          * @param {string} userId - ID of the customer placing the order
          * @param {string} storeId - ID of the store fulfilling the order
@@ -28,52 +29,67 @@ class CreateOrder {
         try {
             // 1. Generate unique order ID
             const orderId = `order_${Date.now()}`;
-
-            // 2. Retrieve customer's Hedera wallet details
-            const customerWallet = await this.hederaClient.getWallet(userId);
-            if (!customerWallet) {
-                throw new Error(`No Hedera wallet found for user ${userId}`);
-            }
-
-            // 3. Create Order object
-            const order = {
+            
+            // 2. Deploy Hedera smart contract between customer and store
+            // Note: User wallets should already exist from signup
+            console.log(`Deploying contract for order between user ${userId} and store ${storeId}`);
+            const contractId = await this.hederaClient.deployContract(
+                userId,  // Order owner (customer)
+                storeId, // Store owner
+                totalPrice,
+                deliveryFee
+            );
+            console.log(`Contract deployed with ID: ${contractId}`);
+            
+            // 3. Fund contract from customer wallet
+            console.log(`Funding contract ${contractId} with ${totalPrice} + ${deliveryFee} HBAR`);
+            await this.hederaClient.fundContract(
+                userId,      // Order owner funds the contract
+                contractId,
+                totalPrice,
+                deliveryFee
+            );
+            console.log(`Contract funded successfully`);
+            
+            // 4. Create and persist order in Firestore with contract details
+            const order = new Order(
                 orderId,
                 userId,
                 storeId,
                 totalPrice,
                 deliveryFee,
-                status: "PENDING",
-                timestamp: new Date().toISOString()
+                "INITIATED", // Initial status matches contract state
+                new Date().toISOString(),
+                contractId.toString(),
+                null // No delivery agent assigned yet
+            );
+            
+            order.create(this.firestoreRepo);
+            console.log(`Order ${orderId} persisted in Firestore`);
+            
+            // 5. Verify contract state
+            const contractState = await this.hederaClient.getContractState(contractId);
+            console.log(`Contract state verified: ${JSON.stringify(contractState)}`);
+            
+            return {
+                order: {
+                    order_id: order.order_id,
+                    user_id: order.user_id,
+                    store_id: order.store_id,
+                    total_price: order.total_price,
+                    delivery_fee: order.delivery_fee,
+                    status: order.status,
+                    timestamp: order.timestamp,
+                    contract_id: order.contract_id
+                },
+                contractId: contractId.toString(),
+                contractState
             };
-
-            // 4. Deploy Hedera smart contract
-            const contractId = await this.hederaClient.deployContract(
-                storeId,
-                Math.round(totalPrice * 100), // Convert to cents
-                Math.round(deliveryFee * 100)
-            );
-
-            // 5. Fund contract from customer wallet
-            await this.hederaClient.fundContract(
-                contractId,
-                Math.round(totalPrice * 100),
-                Math.round(deliveryFee * 100)
-            );
-
-            // 6. Persist order in Firestore with contract details
-            const orderData = { ...order, contractId };
-            await this.firestoreRepo.write("orders", {
-                documentTag: orderId,
-                contents: orderData
-            });
-
-            return { order: orderData, contractId };
         } catch (error) {
             console.error(`Order creation failed: ${error.message}`);
             throw error;
         }
     }
-
 }
 
-module.exports = CreateOrder;
+export default CreateOrder;

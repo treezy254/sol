@@ -48,41 +48,5 @@ class FirebaseAuthService {
     }
 }
 
-// ✅ Debugging output
-console.log("✅ FirebaseAuthService initialized successfully!");
 
-// Run test if executed directly
-async function main() {
-    console.log("\nRunning FirebaseAuthService tests...\n");
-
-    // Test signup
-    const email = `testuser${Date.now()}@example.com`; // Unique email
-    const password = "SecurePassword123";
-    const displayName = "Test User";
-
-    console.log("Testing signup...");
-    const signupResult = await FirebaseAuthService.signup(email, password, displayName);
-    console.log("Signup Result:", signupResult);
-
-    if (signupResult.error) {
-        console.error("Signup failed:", signupResult.error);
-        return;
-    }
-
-    // Test getUser
-    console.log("\nTesting getUser...");
-    const getUserResult = await FirebaseAuthService.getUser(signupResult.uid);
-    console.log("Get User Result:", getUserResult);
-
-    if (getUserResult.error) {
-        console.error("Get User failed:", getUserResult.error);
-        return;
-    }
-
-    console.log("\nAll tests completed successfully.");
-}
-
-// Run the script only if executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-    main();
-}
+module.exports = FirebaseAuthService;

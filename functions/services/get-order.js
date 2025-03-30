@@ -1,7 +1,7 @@
-import FirestoreRepository from './utils/repositories';
+const FirestoreRepository = require("../utils/firestore");
 
 class GetOrder {
-    constructor(firestoreRepo) {
+    constructor(firestoreRepo = FirestoreRepository) {
         /**
          * Initialize GetOrder service with Firestore repository.
          * @param {FirestoreRepository} firestoreRepo - Firestore repository for data retrieval
@@ -16,8 +16,13 @@ class GetOrder {
          * @return {Object|null} - Order details or null if not found
          */
         try {
-            const orderData = await this.firestoreRepo.read("orders", orderId);
-            return orderData ? orderData.contents : null;
+            const results = await this.firestoreRepo.read("orders", orderId);
+            
+            if (!results || results.length === 0) {
+                return null;
+            }
+            
+            return results[0];
         } catch (error) {
             console.error(`Error retrieving order ${orderId}: ${error.message}`);
             throw error;
@@ -31,10 +36,12 @@ class GetOrder {
          * @return {Array<Object>} - List of user's orders
          */
         try {
-            const queryResults = await this.firestoreRepo.query("orders", [
-                ["contents.user_id", "==", userId]
-            ]);
-            return queryResults.map(result => result.contents);
+            const filters = [
+                { field: "user_id", operator: "==", value: userId }
+            ];
+            
+            const results = await this.firestoreRepo.read("orders", null, filters);
+            return results || [];
         } catch (error) {
             console.error(`Error retrieving orders for user ${userId}: ${error.message}`);
             throw error;
@@ -48,10 +55,12 @@ class GetOrder {
          * @return {Array<Object>} - List of store's orders
          */
         try {
-            const queryResults = await this.firestoreRepo.query("orders", [
-                ["contents.store_id", "==", storeId]
-            ]);
-            return queryResults.map(result => result.contents);
+            const filters = [
+                { field: "store_id", operator: "==", value: storeId }
+            ];
+            
+            const results = await this.firestoreRepo.read("orders", null, filters);
+            return results || [];
         } catch (error) {
             console.error(`Error retrieving orders for store ${storeId}: ${error.message}`);
             throw error;
@@ -65,10 +74,12 @@ class GetOrder {
          * @return {Array<Object>} - List of orders matching the status
          */
         try {
-            const queryResults = await this.firestoreRepo.query("orders", [
-                ["contents.status", "==", status]
-            ]);
-            return queryResults.map(result => result.contents);
+            const filters = [
+                { field: "status", operator: "==", value: status }
+            ];
+            
+            const results = await this.firestoreRepo.read("orders", null, filters);
+            return results || [];
         } catch (error) {
             console.error(`Error retrieving orders with status ${status}: ${error.message}`);
             throw error;
@@ -78,14 +89,29 @@ class GetOrder {
     async recentOrders(limit = 10) {
         /**
          * Retrieve most recent orders.
+         * Note: This method may need adjustment as the current FirestoreRepository 
+         * implementation does not support sorting or limiting
          * @param {number} limit - Number of recent orders to retrieve
          * @return {Array<Object>} - List of recent orders
          */
         try {
-            const queryResults = await this.firestoreRepo.query("orders", [], [
-                ["contents.timestamp", "desc"]
-            ], limit);
-            return queryResults.map(result => result.contents);
+            // Since the current FirestoreRepository doesn't have sorting capabilities,
+            // we'll just fetch all orders and sort/limit in memory
+            const results = await this.firestoreRepo.read("orders");
+            
+            if (!results || results.length === 0) {
+                return [];
+            }
+            
+            // Sort by created_at or timestamp if available
+            const sorted = [...results].sort((a, b) => {
+                const timeA = a.created_at || a.timestamp || 0;
+                const timeB = b.created_at || b.timestamp || 0;
+                return new Date(timeB) - new Date(timeA);
+            });
+            
+            // Apply limit
+            return sorted.slice(0, limit);
         } catch (error) {
             console.error(`Error retrieving recent orders: ${error.message}`);
             throw error;
@@ -93,4 +119,4 @@ class GetOrder {
     }
 }
 
-export default GetOrder;
+module.exports = GetOrder;

@@ -80,6 +80,35 @@ export class HederaClient {
     }
   }
 
+  /**
+ * Get wallet for a specific user
+ * @param {string} userId - The user ID to retrieve wallet for
+ * @returns {Object} - The wallet information
+ */
+async getWallet(userId) {
+  try {
+    // Check if the user has a wallet
+    if (!this.userWallets.has(userId)) {
+      return {
+        exists: false,
+        message: "Wallet not found for this user"
+      };
+    }
+    
+    const wallet = this.userWallets.get(userId);
+    
+    return {
+      exists: true,
+      userId,
+      accountId: wallet.accountId.toString(),
+      ethereumAddress: this._getEthereumAddressFromAccount(wallet.accountId)
+    };
+  } catch (error) {
+    console.error(`Error retrieving wallet for user ${userId}: ${error}`);
+    throw error;
+  }
+}
+
   // Helper method to temporarily switch the client operator
   async _executeAsUser(accountId, privateKey, operation) {
     // Store current operator

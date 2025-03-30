@@ -1,6 +1,6 @@
 import { GeminiHandler } from "../utils/gemini";
-import { EmbeddingService } from "./utils/pineconee";
-import { FirestoreRepository } from "./utils/firestore";
+import { EmbeddingService } from "../utils/pinecone";
+import { FirestoreRepository } from "../utils/firestore";
 
 
 class ProductSearchService {

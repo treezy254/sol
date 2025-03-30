@@ -1,46 +1,43 @@
-import { PineconeClient } from "@pinecone-database/pinecone";
+import { Pinecone } from "@pinecone-database/pinecone";
+import dotenv from "dotenv";
+dotenv.config();
 
 class EmbeddingService {
     constructor() {
-        this.apiKey = "pcsk_3Bzop7_7RYdZmC46eYgCqYTjqPGbWeE3by8FNLQjahnhQuBvamR4jMyThAJf12QnnyymU9";
-        this.indexHost = "https://products-g91gzb3.svc.aped-4627-b74a.pinecone.io";
-        this.namespace = "products-index";
-        
-        this.pinecone = new PineconeClient();
-        this.pinecone.init({ apiKey: this.apiKey, environment: "us-east1-gcp" });
-        this.index = this.pinecone.Index("products-g91gzb3");
+        this.apiKey = process.env.PINECONE_API_KEY;
+        this.indexName = "products"; // Corrected index name
+        this.namespace = "products-index"; // Namespace in Pinecone
+        this.pc = new Pinecone({ apiKey: this.apiKey });
+    }
+
+    async init() {
+        this.index = this.pc.index(this.indexName).namespace(this.namespace);
     }
 
     async createEmbedding(text) {
-        // Placeholder for embedding generation logic (Replace with actual API call)
-        const embedding = await this.generateEmbedding(text);
-        return embedding;
-    }
-
-    async generateEmbedding(text) {
-        // Simulate API call to an embedding model (Replace with actual implementation)
-        return Array(768).fill(Math.random()); // Simulated embedding vector
+        return Array(1024).fill(Math.random()); // Match Pinecone's dimensions
     }
 
     async indexText(text, vectorId) {
         const embedding = await this.createEmbedding(text);
         const vector = {
             id: vectorId,
-            values: embedding,
-            metadata: { original_text: text }
+            values: embedding, // Ensure correct format for Pinecone
+            metadata: { chunk_text: text, category: "example-category" },
         };
-        await this.index.upsert([{ ...vector }], this.namespace);
+
+        await this.index.upsert([{ id: vectorId, values: embedding, metadata: vector.metadata }]);
+        console.log(`✅ Text indexed with vector ID: ${vectorId}`);
     }
 
-    async query(queryVector, topK, filterConditions = null) {
-        return await this.index.query({
-            namespace: this.namespace,
-            topK,
+    async query(queryVector, topK = 3, filterConditions = null) {
+        const queryResponse = await this.index.query({
             vector: queryVector,
             filter: filterConditions,
+            topK,
             includeMetadata: true
         });
+        return queryResponse;
     }
 }
 
-export default EmbeddingService;

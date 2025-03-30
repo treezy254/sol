@@ -1,7 +1,14 @@
 const admin = require("firebase-admin");
 
-// Initialize Firebase Admin SDK
-admin.initializeApp();
+// Check if Firebase has already been initialized
+if (!admin.apps.length) {
+  const serviceAccount = require("./serviceAccount.json");
+  
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+}
+
 const db = admin.firestore();
 
 class FirestoreRepository {
@@ -69,3 +76,4 @@ class FirestoreRepository {
 }
 
 module.exports = FirestoreRepository;
+

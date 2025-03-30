@@ -1,16 +1,21 @@
-import admin from "firebase-admin";
-import { getAuth } from "firebase-admin/auth";
-import fs from "fs";
+const fs = require("fs");
+const path = require("path");
+const admin = require("firebase-admin");
 
-// Initialize Firebase Admin SDK
-const serviceAccount = JSON.parse(fs.readFileSync("config/serviceAccountKey.json", "utf-8"));
+// ✅ Use absolute path
+const serviceAccountPath = path.resolve(__dirname, "serviceAccount.json");
+
+// ✅ Read and parse the JSON file
+const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, "utf-8"));
+
+// ✅ Initialize Firebase Admin SDK
 if (!admin.apps.length) {
     admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
+        credential: admin.credential.cert(serviceAccount),
     });
 }
 
-const authService = getAuth();
+const authService = admin.auth();
 
 class FirebaseAuthService {
     static async signup(email, password, displayName = null) {
@@ -42,4 +47,3 @@ class FirebaseAuthService {
     }
 }
 
-export default FirebaseAuthService;

@@ -74,43 +74,6 @@ class CreateOrder {
         }
     }
 
-    async cancelOrder(orderId) {
-        /**
-         * Cancel an existing order and handle contract refund.
-         * 
-         * @param {string} orderId - ID of the order to cancel
-         * @returns {Promise<Object>} - Status message
-         */
-        try {
-            // Retrieve order details from Firestore
-            const orderRef = await this.firestoreRepo.read("orders", orderId);
-            if (!orderRef) {
-                throw new Error(`Order ${orderId} not found`);
-            }
-
-            const orderData = orderRef.contents;
-            const contractId = orderData.contractId;
-
-            if (!contractId) {
-                throw new Error(`No contract associated with order ${orderId}`);
-            }
-
-            // Refund logic (if applicable, implement refundContract in Hedera client)
-            // await this.hederaClient.refundContract(contractId);
-
-            // Update order status
-            const updatedOrderData = { ...orderData, status: "CANCELLED" };
-            await this.firestoreRepo.write("orders", {
-                documentTag: orderId,
-                contents: updatedOrderData
-            });
-
-            return { status: "Order cancelled successfully" };
-        } catch (error) {
-            console.error(`Order cancellation failed: ${error.message}`);
-            throw error;
-        }
-    }
 }
 
 module.exports = CreateOrder;

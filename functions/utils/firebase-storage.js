@@ -1,51 +1,88 @@
-const admin = require("firebase-admin");
+import { readFileSync } from "fs";
+import { resolve } from "path";
+import admin from "firebase-admin";
+import { getAuth } from "firebase-admin/auth";
 
-// Initialize Firebase Admin SDK
-admin.initializeApp();
-const storage = admin.storage().bucket("everyautomate.firebasestorage.app");
+// ✅ Use absolute path
+const serviceAccountPath = resolve("/home/zxxc/Desktop/java/functions/utils/serviceAccount.json");
 
-class FirebaseStorageRepository {
-  static async writeFile(localPath, storagePath) {
-    const file = storage.file(storagePath);
-    await file.save(require("fs").readFileSync(localPath));
-    return file.publicUrl();
-  }
+// ✅ Read and parse the JSON file
+const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, "utf-8"));
 
-  static async readFile(storagePath, localPath) {
-    const file = storage.file(storagePath);
-    await file.download({ destination: localPath });
-    return localPath;
-  }
-
-  static async deleteFile(storagePath) {
-    const file = storage.file(storagePath);
-    await file.delete();
-  }
-
-  static async getUrl(storagePath) {
-    const file = storage.file(storagePath);
-    return file.publicUrl();
-  }
-
-  static async storeProductFiles(storeId, productId, imagePaths, audioPath) {
-    const basePath = `stores/${storeId}/products/${productId}`;
-
-    // Store images
-    const imageUrls = await Promise.all(
-      imagePaths.map(async (imagePath, idx) => {
-        const extension = imagePath.split(".").pop();
-        const storagePath = `${basePath}/images/image_${idx}.${extension}`;
-        return await FirebaseStorageRepository.writeFile(imagePath, storagePath);
-      })
-    );
-
-    // Store audio
-    const audioExtension = audioPath.split(".").pop();
-    const audioStoragePath = `${basePath}/audio/description.${audioExtension}`;
-    const audioUrl = await FirebaseStorageRepository.writeFile(audioPath, audioStoragePath);
-
-    return { imageUrls, audioUrl };
-  }
+// ✅ Initialize Firebase Admin SDK
+if (!admin.apps.length) {
+    admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+    });
 }
 
-module.exports = FirebaseStorageRepository;
+const authService = getAuth();
+
+class FirebaseAuthService {
+    static async signup(email, password, displayName = null) {
+        try {
+            const user = await authService.createUser({
+                email,
+                password,
+                displayName
+            });
+            return { uid: user.uid, email: user.email, displayName: user.displayName };
+        } catch (error) {
+            return { error: error.message };
+        }
+    }
+
+    static async getUser(uid) {
+        try {
+            const user = await authService.getUser(uid);
+            return {
+                uid: user.uid,
+                email: user.email,
+                displayName: user.displayName,
+                phoneNumber: user.phoneNumber,
+                photoUrl: user.photoURL
+            };
+        } catch (error) {
+            return { error: error.message };
+        }
+    }
+}
+
+// ✅ Debugging output
+console.log("✅ FirebaseAuthService initialized successfully!");
+
+// Run test if executed directly
+async function main() {
+    console.log("\nRunning FirebaseAuthService tests...\n");
+
+    // Test signup
+    const email = `testuser${Date.now()}@example.com`; // Unique email
+    const password = "SecurePassword123";
+    const displayName = "Test User";
+
+    console.log("Testing signup...");
+    const signupResult = await FirebaseAuthService.signup(email, password, displayName);
+    console.log("Signup Result:", signupResult);
+
+    if (signupResult.error) {
+        console.error("Signup failed:", signupResult.error);
+        return;
+    }
+
+    // Test getUser
+    console.log("\nTesting getUser...");
+    const getUserResult = await FirebaseAuthService.getUser(signupResult.uid);
+    console.log("Get User Result:", getUserResult);
+
+    if (getUserResult.error) {
+        console.error("Get User failed:", getUserResult.error);
+        return;
+    }
+
+    console.log("\nAll tests completed successfully.");
+}
+
+// Run the script only if executed directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+    main();
+}

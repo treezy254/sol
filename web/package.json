@@ -1,0 +1,26 @@
+{
+  "name": "web",
+  "version": "1.0.0",
+  "description": "web interface for Jamii app api",
+  "keywords": [
+    "html",
+    "css",
+    "js",
+    "node"
+  ],
+  "homepage": "https://github.com/treezy254/sol#readme",
+  "bugs": {
+    "url": "https://github.com/treezy254/sol/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/treezy254/sol.git"
+  },
+  "license": "ISC",
+  "author": "Kamau Samuel",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}

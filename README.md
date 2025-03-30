@@ -1,11 +1,3 @@
-Initialize firebase
-	``` Firebase init
-	
-navigate to functions folder
-	``` cd functions
+accesss the function at
 
-compile the solidity contract
-
-	``` node conttracts/compile.js
-
-To deploy the function to firebase
+	``` https://api-q6xvthjexa-uc.a.run.app 

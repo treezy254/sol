@@ -1,4 +1,3 @@
-import { FirestoreRepository } from "../utils/repositories.js";
 
 class Product {
   constructor(productId, storeId, name, description, price, category, subcategory, stock, tags, images, audio) {
@@ -18,7 +17,7 @@ class Product {
   create(repo) {
     const data = {
       document_tag: this.product_id,
-      contents: { ...this },
+      contents: {...this},
     };
     repo.write("products", data);
   }
@@ -36,7 +35,7 @@ class Store {
   create(repo) {
     const data = {
       document_tag: this.store_id,
-      contents: { ...this },
+      contents: {...this},
     };
     repo.write("stores", data);
   }
@@ -67,10 +66,11 @@ class Order {
   create(repo) {
     const data = {
       document_tag: this.order_id,
-      contents: { ...this },
+      contents: {...this},
     };
     repo.write("orders", data);
   }
 }
 
-export { Product, Store, User, Order };
+
+module.exports = {Product, Store, User, Order};

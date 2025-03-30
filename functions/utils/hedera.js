@@ -14,17 +14,6 @@ const {
 const fs = require("fs").promises;
 
 
-// Utility function to ensure valid Ethereum-style address
-function formatEthereumAddress(address) {
-  // Remove '0x' if present, then ensure 40 characters
-  const cleanAddress = address.replace(/^0x/, "");
-
-  // Pad or truncate to ensure 40 characters
-  const formattedAddress = cleanAddress.padStart(40, "0").slice(-40);
-
-  return "0x" + formattedAddress;
-}
-
 class HederaClient {
   constructor(operatorId, operatorKey) {
     try {
@@ -200,7 +189,7 @@ class HederaClient {
                     new ContractFunctionParameters()
                         .addAddress(storeOwnerAddress)
                         .addUint256(amount)
-                        .addUint256(deliveryFee)
+                        .addUint256(deliveryFee),
                 );
 
             const contractResponse = await contractTx.execute(this.client);
@@ -210,7 +199,7 @@ class HederaClient {
             console.log("Contract receipt obtained");
 
             return contractReceipt.contractId;
-          }
+          },
       );
     } catch (error) {
       console.error(`Contract deployment error: ${error}`);
@@ -245,7 +234,7 @@ class HederaClient {
           const response = await transaction.execute(this.client);
           console.log(`Getting transaction receipt...`);
           return await response.getReceipt(this.client);
-        }
+        },
     );
   }
 
@@ -285,7 +274,7 @@ class HederaClient {
           const response = await transaction.execute(this.client);
           console.log(`Getting transaction receipt...`);
           return await response.getReceipt(this.client);
-        }
+        },
     );
   }
 
@@ -309,7 +298,7 @@ class HederaClient {
           const response = await transaction.execute(this.client);
           console.log(`Getting transaction receipt...`);
           return await response.getReceipt(this.client);
-        }
+        },
     );
   }
 
@@ -352,7 +341,7 @@ class HederaClient {
           const response = await transaction.execute(this.client);
           console.log(`Getting transaction receipt...`);
           return await response.getReceipt(this.client);
-        }
+        },
     );
   }
 
@@ -431,4 +420,5 @@ class HederaClient {
   }
 }
 
-module.exports = HederaClient;
+
+module.exports = {HederaClient};

@@ -4,16 +4,16 @@
  */
 
 // Import service classes
-const CreateUserService = require("../services/CreateUserService");
-const {GetUser} = require("../services/GetUser");
-const CreateOrder = require("../services/CreateOrder");
-const GetOrder = require("../services/GetOrder");
-const GetProduct = require("../services/GetProduct");
-const ConfirmPickup = require("../services/ConfirmPickup");
-const ConfirmDelivery = require("../services/ConfirmDelivery");
-const AcceptDelivery = require("../services/AcceptDelivery");
-const GetStore = require("../services/GetStore");
-const ProductSearchService = require("../services/ProductSearchService");
+const CreateUserService = require("../services/create-user");
+const {GetUser} = require("../services/get-user");
+const CreateOrder = require("../services/create-order");
+const GetOrder = require("../services/get-order");
+const GetProduct = require("../services/get-product");
+const ConfirmPickup = require("../services/confirm-pickup");
+const ConfirmDelivery = require("../services/confirm-delivery");
+const AcceptDelivery = require("../services/accept-delivery");
+const GetStore = require("../services/get-store");
+const ProductSearchService = require("../services/search-products");
 
 // Import repositories and clients
 const FirestoreRepository = require("../utils/firestore");

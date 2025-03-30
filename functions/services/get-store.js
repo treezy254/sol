@@ -1,5 +1,5 @@
-const {Location} = require("../models/Location");
-const {Store} = require("../models/Store");
+const {Location} = require("../domain/models");
+const {Store} = require("../domain/models");
 
 class GetStore {
   constructor(repo) {

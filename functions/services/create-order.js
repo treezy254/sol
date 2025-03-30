@@ -37,7 +37,7 @@ class CreateOrder {
           userId, // Order owner (customer)
           storeId, // Store owner
           totalPrice,
-          deliveryFee
+          deliveryFee,
       );
       console.log(`Contract deployed with ID: ${contractId}`);
 
@@ -47,7 +47,7 @@ class CreateOrder {
           userId, // Order owner funds the contract
           contractId,
           totalPrice,
-          deliveryFee
+          deliveryFee,
       );
       console.log(`Contract funded successfully`);
 
@@ -61,7 +61,7 @@ class CreateOrder {
           "INITIATED", // Initial status matches contract state
           new Date().toISOString(),
           contractId.toString(),
-          null // No delivery agent assigned yet
+          null, // No delivery agent assigned yet
       );
 
       order.create(this.firestoreRepo);

@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Documentation</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #3498db;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #2980b9;
+            margin-top: 20px;
+        }
+        .endpoint {
+            background-color: #f8f9fa;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 0 4px 4px 0;
+        }
+        .method {
+            display: inline-block;
+            padding: 5px 10px;
+            background-color: #3498db;
+            color: white;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        code {
+            background-color: #f1f1f1;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: Consolas, Monaco, 'Andale Mono', monospace;
+        }
+        pre {
+            background-color: #f1f1f1;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 20px 0;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        .section {
+            margin-bottom: 40px;
+        }
+        .response-example {
+            margin-top: 15px;
+        }
+        nav {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 30px;
+        }
+        nav ul {
+            list-style-type: none;
+            padding: 0;
+            display: flex;
+            flex-wrap: wrap;
+        }
+        nav li {
+            margin-right: 20px;
+            margin-bottom: 10px;
+        }
+        nav a {
+            text-decoration: none;
+            color: #3498db;
+            font-weight: 500;
+        }
+        nav a:hover {
+            text-decoration: underline;
+        }
+        .parameter-required {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .tag {
+            display: inline-block;
+            padding: 3px 8px;
+            background-color: #e1f5fe;
+            color: #0288d1;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>API Documentation</h1>
+    
+    <nav>
+        <h3>Quick Navigation</h3>
+        <ul>
+            <li><a href="#overview">Overview</a></li>
+            <li><a href="#authentication">Authentication</a></li>
+            <li><a href="#user-management">User Management</a></li>
+            <li><a href="#order-management">Order Management</a></li>
+            <li><a href="#product-services">Product Services</a></li>
+            <li><a href="#store-services">Store Services</a></li>
+            <li><a href="#order-fulfillment">Order Fulfillment</a></li>
+        </ul>
+    </nav>
+
+    <div class="section" id="overview">
+        <h2>Overview</h2>
+        <p>This API provides access to various services for managing users, orders, products, and store operations. All requests should be made to the base endpoint with the appropriate service name and parameters.</p>
+        
+        <div class="endpoint">
+            <span class="method">POST</span>
+            <code>/api</code>
+        </div>
+
+        <h3>Request Format</h3>
+        <p>All API requests should follow this JSON format:</p>
+        <pre><code>{
+  "service": "serviceName",
+  "params": {
+    // service-specific parameters
+  }
+}</code></pre>
+
+        <h3>Response Format</h3>
+        <p>All responses will be JSON objects with at least a <code>success</code> field indicating whether the operation was successful:</p>
+        <pre><code>{
+  "success": true|false,
+  // Other service-specific response fields
+}</code></pre>
+
+        <h3>Error Handling</h3>
+        <p>In case of errors, the response will include error details:</p>
+        <pre><code>{
+  "success": false,
+  "message": "Error description",
+  "error": "Detailed error message"
+}</code></pre>
+    </div>
+
+    <div class="section" id="authentication">
+        <h2>Authentication</h2>
+        <p>Most endpoints require authentication. Authentication details should be included in the request parameters where required.</p>
+    </div>
+
+    <div class="section" id="user-management">
+        <h2>User Management</h2>
+        
+        <h3 id="create-user">Create User</h3>
+        <div class="endpoint">
+            <span class="method">POST</span>
+            <code>/api</code> with <code>"service": "createUser"</code>
+        </div>
+        <p>Creates a new user account.</p>
+        
+        <h4>Parameters</h4>
+        <table>
+            <tr>
+                <th>Parameter</th>
+                <th>Type</th>
+                <th>Required</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td>email</td>
+                <td>String</td>
+                <td class="parameter-required">Yes</td>
+                <td>User's email address</td>
+            </tr>
+            <tr>
+                <td>password</td>
+                <td>String</td>
+                <td class="parameter-required">Yes</td>
+                <td>User's password</td>
+            </tr>
+            <tr>
+                <td>displayName</td>
+                <td>String</td>
+                <td class="parameter-required">Yes</td>
+                <td>User's display name</td>
+            </tr>
+        </table>
+        
+        <h4>Example Request</h4>
+        <pre><code>{
+  "service": "createUser",
+  "params": {
+    "email": "user@example.com",
+    "password": "securepassword",
+    "displayName": "John Doe"
+  }
+}</code></pre>
+        
+        <h4>Example Response</h4>
+        <pre><code>{
+  "success": true,
+  "userId": "user123",
+  "hederaAccountId": "0.0.12345"
+}</code></pre>
+
+        <h3 id="get-user">Get User</h3>
+        <div class="endpoint">
+            <span class="method">POST</span>
+            <code>/api</code> with <code>"service": "getUser"</code>
+        </div>
+        <p>Retrieves user information.</p>
+        
+        <h4>Parameters</h4>
+        <table>
+            <tr>
+                <th>Parameter</th>
+                <th>Type</th>
+                <th>Required</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td>firebaseUid</td>
+                <td>String</td>
+                <td class="parameter-required">Yes</td>
+                <td>Firebase user ID</td>
+            </tr>
+        </table>
+        
+        <h4>Example Request</h4>
+        <pre><code>{
+  "service": "getUser",
+  "params": {
+    "firebaseUid": "someFirebaseUserId"
+  }
+}</code></pre>
+        
+        <h4>Example Response</h4>
+        <pre><code>{
+  "success": true,
+  "user": {
+    "id": "someFirebaseUserId",
+    "email": "user@example.com",
+    "displayName": "John Doe",
+    "hederaAccountId": "0.0.12345"
+  }
+}</code></pre>
+    </div>
+
+    <div class="section" id="order-management">
+        <h2>Order Management</h2>
+        
+        <h3 id="create-order">Create Order</h3>
+        <div class="endpoint">
+            <span class="method">POST</span>
+            <code>/api</code> with <code>"service": "createOrder"</code>
+        </div>
+        <p>Creates a new order.</p>
+        
+        <h4>Parameters</h4>
+        <table>
+            <tr>
+                <th>Parameter</th>
+                <th>Type</th>
+                <th>Required</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td>userId</td>
+                <td>String</td>
+                <td class="parameter-required">Yes</td>
+                <td>User ID of the customer</td>
+            </tr>
+            <tr>
+                <td>storeId</td>
+                <td>String</td>
+                <td class="parameter-required">Yes</td>
+                <td>ID of the store</td>
+            </tr>
+            <tr>
+                <td>totalPrice</td>
+                <td>Number</td>
+                <td class="parameter-required">Yes</td>
+                <td>Total price of the order</td>
+            </tr>
+            <tr>
+                <td>deliveryFee</td>
+                <td>Number</td>
+                <td class="parameter-required">Yes</td>
+                <td>Delivery fee for the order</td>
+            </tr>
+        </table>
+        
+        <h4>Example Request</h4>
+        <pre><code>{
+  "service": "createOrder",
+  "params": {
+    "userId": "user123",
+    "storeId": "store456",
+    "totalPrice": 49.99,
+    "deliveryFee": 5.99
+  }
+}</code></pre>
+        
+        <h4>Example Response</h4>
+        <pre><code>{
+  "success": true,
+  "orderId": "order789",
+  "transactionId": "0.0.12345@1234567890"
+}</code></pre>
+
+        <h3 id="get-order">Get Order</h3>
+        <div class="endpoint">
+            <span class="method">POST</span>
+            <code>/api</code> with <code>"service": "getOrder"</code>
+        </div>
+        <p>Retrieves order information.</p>
+        
+        <h4>Parameters</h4>
+        <table>
+            <tr>
+                <th>Parameter</th>
+                <th>Type</th>
+                <th>Required</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td>orderId</td>
+                <td>String</td>
+                <td class="parameter-required">Yes</td>
+                <td>Order ID</td>
+            </tr>
+        </table>
+        
+        <h4>Example Request</h4>
+        <pre><code>{
+  "service": "getOrder",
+  "params": {
+    "orderId": "order789"
+  }
+}</code></pre>
+        
+        <h4>Example Response</h4>
+        <pre><code>{
+  "success": true,
+  "order": {
+    "id": "order789",
+    "userId": "user123",
+    "storeId": "store456",
+    "totalPrice": 49.99,
+    "deliveryFee": 5.99,
+    "status": "pending",
+    "createdAt": "2023-06-15T10:30:45Z"
+  }
+}</code></pre>
+    </div>
+
+    <div class="section" id="product-services">
+        <h2>Product Services</h2>
+        
+        <h3 id="get-product">Get Product</h3>
+        <div class="endpoint">
+            <span class="method">POST</span>
+            <code>/api</code> with <code>"service": "getProduct"</code>
+        </div>
+        <p>Retrieves product information.</p>
+        
+        <h4>Parameters</h4>
+        <table>
+            <tr>
+                <th>Parameter</th>
+                <th>Type</th>
+                <th>Required</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td>productId</td>
+                <td>String</td>
+                <td class="parameter-required">Yes</td>
+                <td>Product ID</td>
+            </tr>
+        </table>
+        
+        <h4>Example Request</h4>
+        <pre><code>{
+  "service": "getProduct",
+  "params": {
+    "productId": "product123"
+  }
+}</code></pre>
+        
+        <h4>Example Response</h4>
+        <pre><code>{
+  "success": true,
+  "product": {
+    "id": "product123",
+    "name": "Sample Product",
+    "description": "A detailed description of the product",
+    "price": 29.99,
+    "storeId": "store456",
+    "imageUrl": "https://example.com/images/product123.jpg",
+    "categories": ["category1", "category2"]
+  }
+}</code></pre>
+
+        <h3 id="search-products">Search Products</h3>
+        <div class="endpoint">
+            <span class="method">POST</span>
+            <code>/api</code> with <code>"service": "searchProducts"</code>
+        </div>
+        <p>Searches for products based on query parameters.</p>
+        
+        <h4>Parameters</h4>
+        <table>
+            <tr>
+                <th>Parameter</th>
+                <th>Type</th>
+                <th>Required</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td>query</td>
+                <td>String</td>
+                <td class="parameter-required">Yes</td>
+                <td>Search query</td>
+            </tr>
+            <tr>
+                <td>storeId</td>
+                <td>String</td>
+                <td>No</td>
+                <td>Filter by store ID</td>
+            </tr>
+            <tr>
+                <td>limit</td>
+                <td>Number</td>
+                <td>No</td>
+                <td>Maximum number of results (default: 20)</td>
+            </tr>
+        </table>
+        
+        <h4>Example Request</h4>
+        <pre><code>{
+  "service": "searchProducts",
+  "params": {
+    "query": "organic food",
+    "storeId": "store456",
+    "limit": 10
+  }
+}</code></pre>
+        
+        <h4>Example Response</h4>
+        <pre><code>{
+  "success": true,
+  "products": [
+    {
+      "id": "product123",
+      "name": "Organic Apple",
+      "description": "Fresh organic apples",
+      "price": 1.99,
+      "storeId": "store456"
+    },
+    {
+      "id": "product124",
+      "name": "Organic Banana",
+      "description": "Fresh organic bananas",
+      "price": 2.49,
+      "storeId": "store456"
+    }
+  ],
+  "total": 2
+}</code></pre>
+    </div>
+
+    <div class="section" id="store-services">
+        <h2>Store Services</h2>
+        
+        <h3 id="get-store">Get Store</h3>
+        <div class="endpoint">
+            <span class="method">POST</span>
+            <code>/api</code> with <code>"service": "getStore"</code>
+        </div>
+        <p>Retrieves store information.</p>
+        
+        <h4>Parameters</h4>
+        <table>
+            <tr>
+                <th>Parameter</th>
+                <th>Type</th>
+                <th>Required</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td>storeId</td>
+                <td>String</td>
+                <td class="parameter-required">Yes</td>
+                <td>Store ID</td>
+            </tr>
+        </table>
+        
+        <h4>Example Request</h4>
+        <pre><code>{
+  "service": "getStore",
+  "params": {
+    "storeId": "store456"
+  }
+}</code></pre>
+        
+        <h4>Example Response</h4>
+        <pre><code>{
+  "success": true,
+  "store": {
+    "id": "store456",
+    "name": "Sample Store",
+    "description": "A detailed description of the store",
+    "address": "123 Main St, Anytown, USA",
+    "ownerId": "user789",
+    "logoUrl": "https://example.com/images/store456.jpg",
+    "categories": ["grocery", "organic"]
+  }
+}</code></pre>
+    </div>
+
+    <div class="section" id="order-fulfillment">
+        <h2>Order Fulfillment</h2>
+        
+        <h3 id="confirm-pickup">Confirm Pickup</h3>
+        <div class="endpoint">
+            <span class="method">POST</span>
+            <code>/api</code> with <code>"service": "confirmPickup"</code>
+        </div>
+        <p>Confirms order pickup by store owner.</p>
+        
+        <h4>Parameters</h4>
+        <table>
+            <tr>
+                <th>Parameter</th>
+                <th>Type</th>
+                <th>Required</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td>orderId</td>
+                <td>String</td>
+                <td class="parameter-required">Yes</td>
+                <td>Order ID</td>
+            </tr>
+            <tr>
+                <td>storeOwnerId</td>
+                <td>String</td>
+                <td class="parameter-required">Yes</td>
+                <td>ID of the store owner</td>
+            </tr>
+        </table>
+        
+        <h4>Example Request</h4>
+        <pre><code>{
+  "service": "confirmPickup",
+  "params": {
+    "orderId": "order789",
+    "storeOwnerId": "user789"
+  }
+}</code></pre>
+        
+        <h4>Example Response</h4>
+        <pre><code>{
+  "success": true,
+  "orderId": "order789",
+  "status": "picked_up",
+  "transactionId": "0.0.12345@1234567890"
+}</code></pre>
+
+        <h3 id="accept-delivery">Accept Delivery</h3>
+        <div class="endpoint">
+            <span class="method">POST</span>
+            <code>/api</code> with <code>"service": "acceptDelivery"</code>
+        </div>
+        <p>Accepts order for delivery by delivery agent.</p>
+        
+        <h4>Parameters</h4>
+        <table>
+            <tr>
+                <th>Parameter</th>
+                <th>Type</th>
+                <th>Required</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td>orderId</td>
+                <td>String</td>
+                <td class="parameter-required">Yes</td>
+                <td>Order ID</td>
+            </tr>
+            <tr>
+                <td>deliveryAgentId</td>
+                <td>String</td>
+                <td class="parameter-required">Yes</td>
+                <td>ID of the delivery agent</td>
+            </tr>
+        </table>
+        
+        <h4>Example Request</h4>
+        <pre><code>{
+  "service": "acceptDelivery",
+  "params": {
+    "orderId": "order789",
+    "deliveryAgentId": "user456"
+  }
+}</code></pre>
+        
+        <h4>Example Response</h4>
+        <pre><code>{
+  "success": true,
+  "orderId": "order789",
+  "status": "in_delivery",
+  "transactionId": "0.0.12345@1234567890"
+}</code></pre>
+
+        <h3 id="confirm-delivery">Confirm Delivery</h3>
+        <div class="endpoint">
+            <span class="method">POST</span>
+            <code>/api</code> with <code>"service": "confirmDelivery"</code>
+        </div>
+        <p>Confirms order delivery by delivery agent.</p>
+        
+        <h4>Parameters</h4>
+        <table>
+            <tr>
+                <th>Parameter</th>
+                <th>Type</th>
+                <th>Required</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td>orderId</td>
+                <td>String</td>
+                <td class="parameter-required">Yes</td>
+                <td>Order ID</td>
+            </tr>
+            <tr>
+                <td>deliveryAgentId</td>
+                <td>String</td>
+                <td class="parameter-required">Yes</td>
+                <td>ID of the delivery agent</td>
+            </tr>
+        </table>
+        
+        <h4>Example Request</h4>
+        <pre><code>{
+  "service": "confirmDelivery",
+  "params": {
+    "orderId": "order789",
+    "deliveryAgentId": "user456"
+  }
+}</code></pre>
+        
+        <h4>Example Response</h4>
+        <pre><code>{
+  "success": true,
+  "orderId": "order789",
+  "status": "delivered",
+  "transactionId": "0.0.12345@1234567890"
+}</code></pre>
+    </div>
+
+    <footer>
+        <p>&copy; 2025 Your Company Name. All rights reserved.</p>
+    </footer>
+
+    <script>
+        // Add smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
+</body>
+</html>

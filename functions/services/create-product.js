@@ -69,7 +69,7 @@ class ProductCreationService {
             metadata.store_id,
             productId,
             tempImagePaths,
-            tempAudioPath
+            tempAudioPath,
         ));
       } catch (error) {
         throw new Error(`Failed to store product files: ${error.message}`);

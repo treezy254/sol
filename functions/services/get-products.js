@@ -24,3 +24,5 @@ class GetProducts {
     return productsData.slice(start, start + pageSize);
   }
 }
+
+module.exports = GetProducts;

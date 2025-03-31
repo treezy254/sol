@@ -7,6 +7,8 @@
 const CreateUserService = require("../services/create-user");
 const {GetUser} = require("../services/get-user");
 const CreateOrder = require("../services/create-order");
+const CreateProduct = require("../services/create-product");
+const CreateStore = require("../services/create-store");
 const GetOrder = require("../services/get-order");
 const GetProduct = require("../services/get-product");
 const ConfirmPickup = require("../services/confirm-pickup");
@@ -55,7 +57,22 @@ const serviceRegistry = {
     return await service.byId(orderId);
   },
 
+  "getOrders": async (params) => {
+    const {status} = params;
+    const service = new GetOrder(firestoreRepo);
+    return await service.filterByStatus(status);
+  },
+
   // Product services
+  "createProduct": async (params) => {
+    const { tempImagePaths, tempAudioPath, metadata } = params;
+    const geminiHandler = new GeminiHandler();
+    const embeddingService = new EmbeddingService();
+    const storageRepo = new FirebaseStorage();
+    const service = new ProductCreationService(geminiHandler, embeddingService, firestoreRepo, storageRepo);
+    return await service.createProduct(tempImagePaths, tempAudioPath, metadata);
+  },
+
   "getProduct": async (params) => {
     const {productId} = params;
     const productRepo = firestoreRepo; // Using the same firestore repo, adjust if needed
@@ -64,6 +81,12 @@ const serviceRegistry = {
   },
 
   // Store services
+  "createStore": async (params) => {
+    const { storeData } = params;
+    const service = new CreateStore(firestoreRepo);
+    return await service.createStore(storeData);
+  },
+  
   "getStore": async (params) => {
     const {storeId} = params;
     const service = new GetStore(firestoreRepo);

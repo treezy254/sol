@@ -1,11 +1,15 @@
 const {v4: uuidv4} = require("uuid");
+const GeminiHandler = require("../utils/gemini");
+const EmbeddingService = require("../utils/pinecone");
+const FirestoreRepository = require("../utils/firestore");
+const FirebaseStorage = require("../utils/firebase-storage");
 
 class ProductCreationService {
   constructor(assistantService, embeddingService, productRepo, storageRepo) {
-    this.assistantService = assistantService;
-    this.embeddingService = embeddingService;
-    this.productRepo = productRepo;
-    this.storageRepo = storageRepo;
+    this.assistantService = GeminiHandler;
+    this.embeddingService = EmbeddingService;
+    this.productRepo = FirestoreRepository;
+    this.storageRepo = FirebaseStorage;
   }
 
   _generateProductId() {

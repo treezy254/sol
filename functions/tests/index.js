@@ -12,7 +12,7 @@ const { handleService } = require('../api/index');
 // Mock data for testing
 const mockData = {
   userId: 'test-user-123',
-  firebaseUid: 'firebase-uid-123',
+  firebaseUid: 'TdpPstjwQ4fWZ4R0bc25TaAAf8r1',
   storeId: 'store-123',
   storeOwnerId: 'store-owner-123',
   productId: 'product-123',

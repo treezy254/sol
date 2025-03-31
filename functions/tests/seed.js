@@ -4,10 +4,14 @@
  * 
  * This script creates test data for 3 stores (automotive, computer/electronics, kitchen)
  * with 10+ products each and their respective store owners.
+ * It also handles uploading product images and audio files to Firebase Storage.
  */
 
 const { v4: uuidv4 } = require('uuid');
+const path = require('path');
+const fs = require('fs');
 const FirestoreRepository = require('../utils/firestore');
+const FirebaseStorage = require('../utils/firebase-storage');
 const { handleService } = require('../api/index');
 
 // Models
@@ -53,17 +57,82 @@ class Store {
   }
 }
 
-// Initialize Firestore repository
+// Initialize repositories
 const firestoreRepo = new FirestoreRepository();
+const storageRepo = new FirebaseStorage();
 
-// Sample image and audio paths - in practice, these would point to actual files in storage
-const sampleImagePaths = [
-  'images/placeholder1.jpg', 
-  'images/placeholder2.jpg', 
-  'images/placeholder3.jpg'
-];
+// Path configurations
+const ASSETS_DIR = path.join(__dirname, '../assets');
+const IMAGES_DIR = path.join(ASSETS_DIR, 'images');
+const AUDIO_PATH = path.join(ASSETS_DIR, 'audio', 'test-audio.wav');
 
-const sampleAudioPath = 'audio/product_description.mp3';
+/**
+ * Uploads an image file to Firebase Storage
+ * @param {string} filePath - Path to the image file
+ * @param {string} productName - Name of the product (for storage path)
+ * @param {string} storeCategory - Store category (automotive, tech, kitchen)
+ * @returns {Promise<string>} - Download URL of the uploaded image
+ */
+async function uploadProductImage(filePath, productName, storeCategory) {
+  try {
+    const sanitizedName = productName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    const storagePath = `products/${storeCategory}/${sanitizedName}.jpg`;
+    const downloadUrl = await storageRepo.uploadFile(filePath, storagePath);
+    return downloadUrl;
+  } catch (error) {
+    console.error(`Error uploading image for ${productName}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Uploads the audio file to Firebase Storage
+ * @param {string} audioPath - Path to the audio file
+ * @param {string} productName - Name of the product (for storage path)
+ * @param {string} storeCategory - Store category (automotive, tech, kitchen)
+ * @returns {Promise<string>} - Download URL of the uploaded audio
+ */
+async function uploadProductAudio(audioPath, productName, storeCategory) {
+  try {
+    const sanitizedName = productName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    const storagePath = `audio/${storeCategory}/${sanitizedName}.wav`;
+    const downloadUrl = await storageRepo.uploadFile(audioPath, storagePath);
+    return downloadUrl;
+  } catch (error) {
+    console.error(`Error uploading audio for ${productName}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Finds the image file for a product
+ * @param {string} productName - Name of the product
+ * @returns {string|null} - Path to the image file or null if not found
+ */
+function findProductImagePath(productName) {
+  const sanitizedName = productName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+  
+  // Try various image file extensions
+  const possibleExtensions = ['.jpeg', '.jpg', '.png'];
+  
+  for (const ext of possibleExtensions) {
+    const possiblePath = path.join(IMAGES_DIR, sanitizedName + ext);
+    if (fs.existsSync(possiblePath)) {
+      return possiblePath;
+    }
+  }
+  
+  // Try with exact product name
+  for (const ext of possibleExtensions) {
+    const possiblePath = path.join(IMAGES_DIR, productName + ext);
+    if (fs.existsSync(possiblePath)) {
+      return possiblePath;
+    }
+  }
+  
+  console.warn(`No image found for product: ${productName}`);
+  return null;
+}
 
 // Create store owners
 async function createStoreOwners() {
@@ -115,23 +184,26 @@ async function createStores(ownerIds) {
       ownerId: ownerIds[0],
       storeName: "AutoZoom Parts & Service",
       description: "Quality automotive parts, accessories, and repair services for all vehicle makes and models.",
-      location: { latitude: 37.7749, longitude: -122.4194 }
+      location: { latitude: 37.7749, longitude: -122.4194 },
+      category: "automotive"
     },
     {
       ownerId: ownerIds[1],
       storeName: "TechHub Electronics",
       description: "Cutting-edge computers, gadgets, and electronic components for professionals and enthusiasts.",
-      location: { latitude: 40.7128, longitude: -74.0060 }
+      location: { latitude: 40.7128, longitude: -74.0060 },
+      category: "tech"
     },
     {
       ownerId: ownerIds[2],
       storeName: "GourmetKitchen Essentials",
       description: "Premium kitchenware, appliances, and culinary tools for home chefs and cooking enthusiasts.",
-      location: { latitude: 34.0522, longitude: -118.2437 }
+      location: { latitude: 34.0522, longitude: -118.2437 },
+      category: "kitchen"
     }
   ];
 
-  const storeIds = [];
+  const stores = [];
   
   for (const store of storeData) {
     try {
@@ -146,17 +218,21 @@ async function createStores(ownerIds) {
       
       newStore.create(firestoreRepo);
       console.log(`Created store: ${store.storeName} with ID: ${storeId}`);
-      storeIds.push(storeId);
+      stores.push({
+        id: storeId,
+        category: store.category,
+        name: store.storeName
+      });
     } catch (error) {
       console.error(`Error creating store: ${store.storeName}`, error);
     }
   }
   
-  return storeIds;
+  return stores;
 }
 
 // Create products for automotive store
-async function createAutomotiveProducts(storeId) {
+async function createAutomotiveProducts(store) {
   console.log("Creating automotive products...");
   
   const products = [
@@ -179,7 +255,7 @@ async function createAutomotiveProducts(storeId) {
       tags: ["air filter", "performance", "engine", "horsepower"]
     },
     {
-      name: "Ceramic Brake Pads (Front)",
+      name: "Ceramic Brake Pads",
       description: "Low-dust ceramic brake pads for smooth, quiet braking and extended rotor life.",
       price: 89.99,
       category: "Brakes",
@@ -206,7 +282,7 @@ async function createAutomotiveProducts(storeId) {
       tags: ["headlights", "LED", "bright", "conversion kit"]
     },
     {
-      name: "Windshield Wiper Blades (Pair)",
+      name: "Windshield Wiper Blades",
       description: "All-season silicone wiper blades for streak-free visibility in any weather.",
       price: 39.99,
       category: "Exterior",
@@ -242,7 +318,7 @@ async function createAutomotiveProducts(storeId) {
       tags: ["OBD2", "scanner", "diagnostic", "code reader"]
     },
     {
-      name: "All-Weather Floor Mats (Set of 4)",
+      name: "All-Weather Floor Mats",
       description: "Custom-fit rubber floor mats to protect your vehicle's interior from dirt and moisture.",
       price: 89.99,
       category: "Interior",
@@ -273,9 +349,24 @@ async function createAutomotiveProducts(storeId) {
   for (const product of products) {
     try {
       const productId = uuidv4();
+      
+      // Find and upload product image
+      const imagePath = findProductImagePath(product.name);
+      let imageUrls = [];
+      
+      if (imagePath) {
+        const imageUrl = await uploadProductImage(imagePath, product.name, store.category);
+        if (imageUrl) {
+          imageUrls.push(imageUrl);
+        }
+      }
+      
+      // Upload audio file
+      const audioUrl = await uploadProductAudio(AUDIO_PATH, product.name, store.category);
+      
       const newProduct = new Product(
         productId,
-        storeId,
+        store.id,
         product.name,
         product.description,
         product.price,
@@ -283,8 +374,8 @@ async function createAutomotiveProducts(storeId) {
         product.subcategory,
         product.stock,
         product.tags,
-        sampleImagePaths,
-        sampleAudioPath
+        imageUrls,
+        audioUrl
       );
       
       newProduct.create(firestoreRepo);
@@ -296,7 +387,7 @@ async function createAutomotiveProducts(storeId) {
 }
 
 // Create products for tech/computer store
-async function createTechProducts(storeId) {
+async function createTechProducts(store) {
   console.log("Creating tech/computer products...");
   
   const products = [
@@ -310,7 +401,7 @@ async function createTechProducts(storeId) {
       tags: ["laptop", "gaming", "RTX 4080", "Ryzen 9"]
     },
     {
-      name: "4K Ultra HD Monitor 32-inch",
+      name: "4K Ultra HD Monitor",
       description: "Professional 4K monitor with 99% Adobe RGB, USB-C connectivity, and adjustable stand.",
       price: 699.99,
       category: "Displays",
@@ -328,7 +419,7 @@ async function createTechProducts(storeId) {
       tags: ["keyboard", "mechanical", "RGB", "gaming"]
     },
     {
-      name: "Wireless Gaming Mouse 25K DPI",
+      name: "Wireless Gaming Mouse",
       description: "Ultra-precise wireless mouse with 25K DPI sensor, 10 programmable buttons, and 70-hour battery life.",
       price: 129.99,
       category: "Peripherals",
@@ -337,7 +428,7 @@ async function createTechProducts(storeId) {
       tags: ["mouse", "wireless", "gaming", "DPI"]
     },
     {
-      name: "Premium Noise-Cancelling Headphones",
+      name: "Noise-Cancelling Headphones",
       description: "Studio-quality wireless headphones with adaptive noise cancellation and 30-hour battery life.",
       price: 349.99,
       category: "Audio",
@@ -364,7 +455,7 @@ async function createTechProducts(storeId) {
       tags: ["SSD", "external", "2TB", "portable"]
     },
     {
-      name: "Wi-Fi 6E Mesh Router System",
+      name: "Wi-Fi 6E Mesh Router",
       description: "Tri-band mesh Wi-Fi system covering up to 7,500 sq ft with speeds up to 11 Gbps.",
       price: 399.99,
       category: "Networking",
@@ -413,9 +504,24 @@ async function createTechProducts(storeId) {
   for (const product of products) {
     try {
       const productId = uuidv4();
+      
+      // Find and upload product image
+      const imagePath = findProductImagePath(product.name);
+      let imageUrls = [];
+      
+      if (imagePath) {
+        const imageUrl = await uploadProductImage(imagePath, product.name, store.category);
+        if (imageUrl) {
+          imageUrls.push(imageUrl);
+        }
+      }
+      
+      // Upload audio file
+      const audioUrl = await uploadProductAudio(AUDIO_PATH, product.name, store.category);
+      
       const newProduct = new Product(
         productId,
-        storeId,
+        store.id,
         product.name,
         product.description,
         product.price,
@@ -423,8 +529,8 @@ async function createTechProducts(storeId) {
         product.subcategory,
         product.stock,
         product.tags,
-        sampleImagePaths,
-        sampleAudioPath
+        imageUrls,
+        audioUrl
       );
       
       newProduct.create(firestoreRepo);
@@ -436,12 +542,12 @@ async function createTechProducts(storeId) {
 }
 
 // Create products for kitchen store
-async function createKitchenProducts(storeId) {
+async function createKitchenProducts(store) {
   console.log("Creating kitchen products...");
   
   const products = [
     {
-      name: "Professional Chef's Knife",
+      name: "Professional Chef Knife",
       description: "8-inch high-carbon stainless steel chef's knife with ergonomic handle and precision edge.",
       price: 149.99,
       category: "Cutlery",
@@ -450,7 +556,7 @@ async function createKitchenProducts(storeId) {
       tags: ["knife", "chef's knife", "stainless steel", "professional"]
     },
     {
-      name: "Stand Mixer with Attachments",
+      name: "Stand Mixer",
       description: "5.5-quart stand mixer with 10 speeds, dough hook, whisk, and flat beater attachments.",
       price: 399.99,
       category: "Appliances",
@@ -468,7 +574,7 @@ async function createKitchenProducts(storeId) {
       tags: ["dutch oven", "cast iron", "enameled", "cookware"]
     },
     {
-      name: "Smart Sous Vide Precision Cooker",
+      name: "Sous Vide Precision Cooker",
       description: "Wi-Fi enabled sous vide immersion circulator with smartphone control and precision temperature.",
       price: 199.99,
       category: "Appliances",
@@ -477,7 +583,7 @@ async function createKitchenProducts(storeId) {
       tags: ["sous vide", "precision cooker", "smart", "immersion"]
     },
     {
-      name: "Espresso Machine with Grinder",
+      name: "Espresso Machine",
       description: "Semi-automatic espresso machine with built-in burr grinder and milk frother.",
       price: 699.99,
       category: "Appliances",
@@ -486,7 +592,7 @@ async function createKitchenProducts(storeId) {
       tags: ["espresso", "coffee machine", "grinder", "milk frother"]
     },
     {
-      name: "Non-Stick Cookware Set (10-Piece)",
+      name: "Non-Stick Cookware Set",
       description: "Professional-grade non-stick cookware set with pots, pans, and lids for all cooking needs.",
       price: 349.99,
       category: "Cookware",
@@ -495,7 +601,7 @@ async function createKitchenProducts(storeId) {
       tags: ["cookware", "non-stick", "pots and pans", "set"]
     },
     {
-      name: "Professional Knife Sharpening System",
+      name: "Knife Sharpening System",
       description: "Multi-angle knife sharpening system with diamond stones and angle guides.",
       price: 129.99,
       category: "Cutlery",
@@ -531,7 +637,7 @@ async function createKitchenProducts(storeId) {
       tags: ["blender", "professional", "high-performance", "variable speed"]
     },
     {
-      name: "Ceramic Knife Set with Block",
+      name: "Ceramic Knife Set",
       description: "5-piece ceramic knife set with bamboo storage block and blade guards.",
       price: 199.99,
       category: "Cutlery",
@@ -540,7 +646,7 @@ async function createKitchenProducts(storeId) {
       tags: ["knife set", "ceramic", "block", "bamboo"]
     },
     {
-      name: "Smart Instant Pot Pressure Cooker",
+      name: "Instant Pot Pressure Cooker",
       description: "Wi-Fi enabled multi-function pressure cooker with 14 cooking programs and app control.",
       price: 179.99,
       category: "Appliances",
@@ -553,9 +659,24 @@ async function createKitchenProducts(storeId) {
   for (const product of products) {
     try {
       const productId = uuidv4();
+      
+      // Find and upload product image
+      const imagePath = findProductImagePath(product.name);
+      let imageUrls = [];
+      
+      if (imagePath) {
+        const imageUrl = await uploadProductImage(imagePath, product.name, store.category);
+        if (imageUrl) {
+          imageUrls.push(imageUrl);
+        }
+      }
+      
+      // Upload audio file
+      const audioUrl = await uploadProductAudio(AUDIO_PATH, product.name, store.category);
+      
       const newProduct = new Product(
         productId,
-        storeId,
+        store.id,
         product.name,
         product.description,
         product.price,
@@ -563,8 +684,8 @@ async function createKitchenProducts(storeId) {
         product.subcategory,
         product.stock,
         product.tags,
-        sampleImagePaths,
-        sampleAudioPath
+        imageUrls,
+        audioUrl
       );
       
       newProduct.create(firestoreRepo);
@@ -580,22 +701,35 @@ async function seedData() {
   try {
     console.log("Starting data seeding process...");
     
+    // Check if assets directory exists
+    if (!fs.existsSync(ASSETS_DIR)) {
+      throw new Error(`Assets directory not found at: ${ASSETS_DIR}`);
+    }
+    
+    if (!fs.existsSync(IMAGES_DIR)) {
+      console.warn(`Images directory not found at: ${IMAGES_DIR}`);
+    }
+    
+    if (!fs.existsSync(AUDIO_PATH)) {
+      console.warn(`Audio file not found at: ${AUDIO_PATH}`);
+    }
+    
     // Create store owners and get their IDs
     const ownerIds = await createStoreOwners();
     if (ownerIds.length !== 3) {
       throw new Error("Failed to create all required store owners");
     }
     
-    // Create stores and get their IDs
-    const storeIds = await createStores(ownerIds);
-    if (storeIds.length !== 3) {
+    // Create stores and get their info
+    const stores = await createStores(ownerIds);
+    if (stores.length !== 3) {
       throw new Error("Failed to create all required stores");
     }
     
     // Create products for each store
-    await createAutomotiveProducts(storeIds[0]);
-    await createTechProducts(storeIds[1]);
-    await createKitchenProducts(storeIds[2]);
+    await createAutomotiveProducts(stores[0]);
+    await createTechProducts(stores[1]);
+    await createKitchenProducts(stores[2]);
     
     console.log("Data seeding completed successfully!");
     return { success: true };
